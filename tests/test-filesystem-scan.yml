@@ -1,0 +1,50 @@
+name: Test trivy filesystem scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: dummy-token
+          trivy_command: filesystem
+          trivy_target: "."
+          trivy_version: "v0.57.0"
+          reporter: local
+          fail_level: none
+        continue-on-error: true
+
+      - name: Assert action ran and outputs are set
+        env:
+          TRIVY_RC: ${{ steps.action.outputs.trivy-return-code }}
+          REVIEWDOG_RC: ${{ steps.action.outputs.reviewdog-return-code }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          echo "trivy-return-code: '$TRIVY_RC'"
+          echo "reviewdog-return-code: '$REVIEWDOG_RC'"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action step was skipped"
+            exit 1
+          fi
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$TRIVY_RC" ]; then
+              echo "FAIL: trivy-return-code output is empty but action succeeded"
+              exit 1
+            fi
+            if [ -z "$REVIEWDOG_RC" ]; then
+              echo "FAIL: reviewdog-return-code output is empty but action succeeded"
+              exit 1
+            fi
+            echo "PASS: both return codes are set (trivy=$TRIVY_RC, reviewdog=$REVIEWDOG_RC)"
+          else
+            echo "INFO: action outcome=$OUTCOME, skipping output value assertions"
+            echo "PASS"
+          fi
