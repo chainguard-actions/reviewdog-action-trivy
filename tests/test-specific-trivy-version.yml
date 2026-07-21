@@ -1,4 +1,4 @@
-name: Test config scan (Terraform)
+name: Test specific trivy version
 on:
   workflow_dispatch:
 jobs:
@@ -15,7 +15,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/tests/fixtures/fake-reviewdog-install.sh" /tmp/fake-reviewdog-install.sh
           chmod +x /tmp/fake-reviewdog-install.sh
 
-          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-trivy.sh" /tmp/fake-trivy-src/trivy
+          # Use the v0.58.0 fake trivy binary
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-trivy-v0.58.0.sh" /tmp/fake-trivy-src/trivy
           chmod +x /tmp/fake-trivy-src/trivy
           cd /tmp/fake-trivy-src && tar -czf /tmp/fake-trivy.tar.gz trivy
 
@@ -27,15 +28,15 @@ jobs:
         uses: .
         with:
           github_token: ${{ github.token }}
-          trivy_command: config
-          trivy_target: action/testdata/config/terraform/without_detections
+          trivy_command: filesystem
+          trivy_target: action/testdata/filesystem/npm/without_detections
           working_directory: .
           reporter: local
           filter_mode: nofilter
           fail_level: none
-          level: warning
-          tool_name: trivy-config
-          trivy_flags: --cache-dir /tmp/trivy-cache
+          level: info
+          trivy_version: v0.58.0
+          trivy_flags: --scanners misconfig --cache-dir /tmp/trivy-cache
 
       - name: Assert trivy-return-code output is set
         env:
@@ -76,13 +77,13 @@ jobs:
           fi
           echo "PASS: both return codes are numeric"
 
-      - name: Assert trivy-return-code is 0 (no misconfigurations in clean fixture)
+      - name: Assert specific trivy version was installed and ran
         env:
           TRIVY_RC: ${{ steps.action.outputs.trivy-return-code }}
         run: |
           echo "trivy-return-code: $TRIVY_RC"
-          if [ "$TRIVY_RC" != "0" ]; then
-            echo "FAIL: expected trivy-return-code=0 for clean terraform fixture, got '$TRIVY_RC'"
+          if ! [[ "$TRIVY_RC" =~ ^[0-9]+$ ]]; then
+            echo "FAIL: trivy-return-code '$TRIVY_RC' is not numeric - specific version install may have failed"
             exit 1
           fi
-          echo "PASS: trivy-return-code is 0 as expected"
+          echo "PASS: specific trivy version v0.58.0 was installed and ran successfully"

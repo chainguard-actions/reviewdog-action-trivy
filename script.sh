@@ -105,16 +105,19 @@ echo '::group:: Running trivy with reviewdog 🐶 ...'
   # Allow failures now, as reviewdog handles them
   set +Eeuo pipefail
 
-  # Split space-separated flag inputs into arrays to safely handle multiple arguments
-  # without allowing shell metacharacter injection via unquoted expansions.
-  # When the input is empty, read -r -a produces an empty array, and
-  # "${array[@]+"${array[@]}"}" expands to nothing (no arguments), which is correct.
-  read -r -a trivy_flags_array <<< "${INPUT_TRIVY_FLAGS:-}"
-  read -r -a reviewdog_flags_array <<< "${INPUT_FLAGS:-}"
+  # Build trivy flags array safely to allow word-splitting of flags without injection
+  trivy_flags_array=()
+  if [[ -n "${INPUT_TRIVY_FLAGS:-}" ]]; then
+    read -ra trivy_flags_array <<< "${INPUT_TRIVY_FLAGS}"
+  fi
 
-  "${TRIVY_PATH}/trivy" --format sarif \
-      ${trivy_flags_array[@]+"${trivy_flags_array[@]}"} \
-      --exit-code 1 "${INPUT_TRIVY_COMMAND}" "${INPUT_TRIVY_TARGET}" 2> /dev/null \
+  # Build reviewdog flags array safely
+  reviewdog_flags_array=()
+  if [[ -n "${INPUT_FLAGS:-}" ]]; then
+    read -ra reviewdog_flags_array <<< "${INPUT_FLAGS}"
+  fi
+
+  "${TRIVY_PATH}/trivy" --format sarif "${trivy_flags_array[@]+"${trivy_flags_array[@]}"}" --exit-code 1 "${INPUT_TRIVY_COMMAND}" "${INPUT_TRIVY_TARGET}" 2> /dev/null \
     |  "${REVIEWDOG_PATH}/reviewdog" -f=sarif \
         -name="${INPUT_TOOL_NAME}" \
         -reporter="${INPUT_REPORTER}" \
@@ -122,7 +125,7 @@ echo '::group:: Running trivy with reviewdog 🐶 ...'
         -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
         -fail-level="${INPUT_FAIL_LEVEL}" \
         -filter-mode="${INPUT_FILTER_MODE}" \
-        ${reviewdog_flags_array[@]+"${reviewdog_flags_array[@]}"}
+        "${reviewdog_flags_array[@]+"${reviewdog_flags_array[@]}"}"
 
   trivy_return="${PIPESTATUS[0]}" reviewdog_return="${PIPESTATUS[1]}" exit_code=$?
   echo "trivy-return-code=${trivy_return}" >> "$GITHUB_OUTPUT"

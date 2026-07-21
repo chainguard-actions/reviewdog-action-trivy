@@ -6,15 +6,14 @@ on:
       - main
   pull_request:
 
-permissions: {}
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 jobs:
   Shellcheck:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -34,9 +33,6 @@ jobs:
 
   Misspell:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

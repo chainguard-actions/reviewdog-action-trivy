@@ -8,15 +8,14 @@ on:
     branches:
       - main
 
-permissions: {}
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   Manage:
     name: Manage GitHub labels
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: read
 
     steps:
       - name: Checkout

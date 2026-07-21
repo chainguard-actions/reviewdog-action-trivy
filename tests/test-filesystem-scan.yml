@@ -1,50 +1,76 @@
-name: Test trivy filesystem scan
+name: Test filesystem scan (no vulnerabilities)
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl, reviewdog, and trivy
+        run: |
+          mkdir -p /tmp/fake-bin /tmp/fake-trivy-src
+
+          # Copy fixture scripts (committed files, no heredoc needed)
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-reviewdog-install.sh" /tmp/fake-reviewdog-install.sh
+          chmod +x /tmp/fake-reviewdog-install.sh
+
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-trivy.sh" /tmp/fake-trivy-src/trivy
+          chmod +x /tmp/fake-trivy-src/trivy
+          cd /tmp/fake-trivy-src && tar -czf /tmp/fake-trivy.tar.gz trivy
+
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
 
       - id: action
         uses: .
         with:
-          github_token: dummy-token
+          github_token: ${{ github.token }}
           trivy_command: filesystem
-          trivy_target: "."
-          trivy_version: "v0.57.0"
+          trivy_target: action/testdata/filesystem/npm/without_detections
+          working_directory: .
           reporter: local
+          filter_mode: nofilter
           fail_level: none
-        continue-on-error: true
+          level: warning
+          trivy_flags: --scanners misconfig --cache-dir /tmp/trivy-cache
 
-      - name: Assert action ran and outputs are set
+      - name: Assert trivy-return-code output is set
+        env:
+          TRIVY_RC: ${{ steps.action.outputs.trivy-return-code }}
+        run: |
+          echo "trivy-return-code: $TRIVY_RC"
+          if [ -z "$TRIVY_RC" ]; then
+            echo "FAIL: trivy-return-code output is empty"
+            exit 1
+          fi
+          echo "PASS: trivy-return-code is set to '$TRIVY_RC'"
+
+      - name: Assert reviewdog-return-code output is set
+        env:
+          REVIEWDOG_RC: ${{ steps.action.outputs.reviewdog-return-code }}
+        run: |
+          echo "reviewdog-return-code: $REVIEWDOG_RC"
+          if [ -z "$REVIEWDOG_RC" ]; then
+            echo "FAIL: reviewdog-return-code output is empty"
+            exit 1
+          fi
+          echo "PASS: reviewdog-return-code is set to '$REVIEWDOG_RC'"
+
+      - name: Assert both return codes are numeric
         env:
           TRIVY_RC: ${{ steps.action.outputs.trivy-return-code }}
           REVIEWDOG_RC: ${{ steps.action.outputs.reviewdog-return-code }}
-          OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "action outcome: $OUTCOME"
-          echo "trivy-return-code: '$TRIVY_RC'"
-          echo "reviewdog-return-code: '$REVIEWDOG_RC'"
-          if [ "$OUTCOME" = "skipped" ]; then
-            echo "FAIL: action step was skipped"
+          echo "trivy-return-code: $TRIVY_RC"
+          echo "reviewdog-return-code: $REVIEWDOG_RC"
+          if ! [[ "$TRIVY_RC" =~ ^[0-9]+$ ]]; then
+            echo "FAIL: trivy-return-code '$TRIVY_RC' is not numeric"
             exit 1
           fi
-          if [ "$OUTCOME" = "success" ]; then
-            if [ -z "$TRIVY_RC" ]; then
-              echo "FAIL: trivy-return-code output is empty but action succeeded"
-              exit 1
-            fi
-            if [ -z "$REVIEWDOG_RC" ]; then
-              echo "FAIL: reviewdog-return-code output is empty but action succeeded"
-              exit 1
-            fi
-            echo "PASS: both return codes are set (trivy=$TRIVY_RC, reviewdog=$REVIEWDOG_RC)"
-          else
-            echo "INFO: action outcome=$OUTCOME, skipping output value assertions"
-            echo "PASS"
+          if ! [[ "$REVIEWDOG_RC" =~ ^[0-9]+$ ]]; then
+            echo "FAIL: reviewdog-return-code '$REVIEWDOG_RC' is not numeric"
+            exit 1
           fi
+          echo "PASS: both return codes are numeric"
