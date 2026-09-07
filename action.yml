@@ -1,0 +1,126 @@
+name: 'Run trivy with reviewdog'
+description: "\U0001F436 Run trivy with reviewdog on pull requests to enforce security best practices"
+author: 'vlaaaaaaad (reviewdog)'
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN'
+    required: true
+    default: "${{ github.token }}"
+  working_directory:
+    description: |
+      Directory to run the action on, from the repo root.
+      Default is . ( root of the repository)
+    default: '.'
+    required: false
+  level:
+    description: 'Report level for reviewdog [info,warning,error]'
+    default: 'error'
+    required: false
+  tool_name:
+    description: |
+      The name for the report as it will show up in GitHub's interface.
+      Default is trivy.
+    default: 'trivy'
+    required: false
+  reporter:
+    description: |
+      Reporter of reviewdog command [github-pr-check,github-pr-review].
+      Default is github-pr-check.
+    default: 'github-pr-check'
+    required: false
+  filter_mode:
+    description: |
+      Filtering for the reviewdog command [added,diff_context,file,nofilter].
+      Default is added.
+    default: 'added'
+    required: false
+  fail_level:
+    description: |
+      If set to `none`, always use exit code 0 for reviewdog. Otherwise, exit code 1 for reviewdog if it finds at least 1 issue with severity greater than or equal to the given level. Possible values: [none,any,info,warning,error] Default is `none`.
+    default: 'none'
+    required: false
+  fail_on_error:
+    description: |
+      **Deprecated**. This option is no longer recommended for use and will be removed in future versions.
+      Exit code for reviewdog when errors are found [true,false]
+      Default is `false`.
+    default: 'false'
+    required: false
+    deprecationMessage: Deprecated, use `fail_level` instead.
+  flags:
+    description: 'Additional reviewdog flags'
+    default: ''
+    required: false
+  trivy_command:
+    description: |
+      Trivy command [aws,config,filesystem,image,kubernetes,rootfs,sbom,vm]
+    required: true
+  trivy_target:
+    description: |
+      Trivy target to scan
+    required: true
+  trivy_version:
+    description: |
+      The version of trivy to install.
+      Default is latest.
+    default: 'latest'
+    required: false
+  trivy_flags:
+    description: |
+      List of arguments to send to trivy
+      For the output to be parsable by reviewdog --format=checkstyle is enforced
+      Default is blank.
+    default: ''
+    required: false
+outputs:
+  trivy-return-code:
+    description: 'trivy command return code'
+    value: ${{ steps.trivy.outputs.trivy-return-code }}
+  reviewdog-return-code:
+    description: 'reviewdog command return code'
+    value: ${{ steps.trivy.outputs.reviewdog-return-code }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - run: $GITHUB_ACTION_PATH/script.sh
+      id: trivy
+      shell: bash
+      env:
+        # We may want to allow specifying reviewdog version as
+        # action's input, but let's start with hard coded latest stable version for reviewdog
+        REVIEWDOG_VERSION: v0.21.0
+        # INPUT_<VARIABLE_NAME> is not available in Composite run steps
+        # https://github.community/t/input-variable-name-is-not-available-in-composite-run-steps/127611
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working_directory }}
+        INPUT_LEVEL: ${{ inputs.level }}
+        INPUT_REPORTER: ${{ inputs.reporter }}
+        INPUT_TOOL_NAME: ${{ inputs.tool_name }}
+        INPUT_FILTER_MODE: ${{ inputs.filter_mode }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+        INPUT_FAIL_LEVEL: ${{ inputs.fail_level }}
+        INPUT_FLAGS: ${{ inputs.flags }}
+        INPUT_TRIVY_VERSION: ${{ inputs.trivy_version }}
+        INPUT_TRIVY_COMMAND: ${{ inputs.trivy_command }}
+        INPUT_TRIVY_TARGET: ${{ inputs.trivy_target }}
+        INPUT_TRIVY_FLAGS: ${{ inputs.trivy_flags }}
+branding:
+  icon: 'edit'
+  color: 'gray-dark'
