@@ -13,6 +13,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.14.0 | [`v1.14.0`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.14.0) | [`a1e6d7d`](https://github.com/reviewdog/action-trivy/commit/a1e6d7dd5520369c076d7ce639a16442938535d8) |
 | v1.15 | [`v1.15`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.15) | [`102f1ed`](https://github.com/reviewdog/action-trivy/commit/102f1eda529aaab3502cbef08bbb0050ee0b6b60) |
 | v1.15.0 | [`v1.15.0`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.15.0) | [`102f1ed`](https://github.com/reviewdog/action-trivy/commit/102f1eda529aaab3502cbef08bbb0050ee0b6b60) |
+| v1.15.1 | [`v1.15.1`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.15.1) | [`aa68cc9`](https://github.com/reviewdog/action-trivy/commit/aa68cc9532e944d1b1d91045a37405e46182dd2c) |
 
 ## Privacy
 
