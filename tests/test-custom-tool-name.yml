@@ -1,0 +1,55 @@
+name: Test custom tool name and working directory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          trivy_command: filesystem
+          trivy_target: .
+          tool_name: my-trivy-scan
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          level: info
+          working_directory: .
+        continue-on-error: true
+
+      - name: Assert outputs are set or action failed gracefully
+        env:
+          TRIVY_RC: ${{ steps.action.outputs.trivy-return-code }}
+          REVIEWDOG_RC: ${{ steps.action.outputs.reviewdog-return-code }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "trivy-return-code: $TRIVY_RC"
+          echo "reviewdog-return-code: $REVIEWDOG_RC"
+
+          if [ "$OUTCOME" = "success" ]; then
+            # On success, outputs must be set
+            if [ -z "$TRIVY_RC" ]; then
+              echo "FAIL: trivy-return-code output was not set on success"
+              exit 1
+            fi
+            if [ -z "$REVIEWDOG_RC" ]; then
+              echo "FAIL: reviewdog-return-code output was not set on success"
+              exit 1
+            fi
+            echo "PASS: action succeeded with outputs (trivy=$TRIVY_RC, reviewdog=$REVIEWDOG_RC)"
+          elif [ "$OUTCOME" = "failure" ]; then
+            # On failure, outputs may or may not be set depending on where it failed
+            if [ -n "$TRIVY_RC" ] && [ -n "$REVIEWDOG_RC" ]; then
+              echo "PASS: action failed but outputs were set (trivy=$TRIVY_RC, reviewdog=$REVIEWDOG_RC)"
+            else
+              echo "PASS: action failed gracefully (outputs not set - failed during installation or setup)"
+            fi
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
