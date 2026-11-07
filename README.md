@@ -17,6 +17,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.16.0 | [`v1.16.0`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.16.0) | [`765ed28`](https://github.com/reviewdog/action-trivy/commit/765ed28176fa16dcac6ced7a652f51f6fd871174) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-trivy/blob/v1.16.0/HARDENING.md) |
 | v1.17.0 | [`v1.17.0`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.17.0) | [`0eb5663`](https://github.com/reviewdog/action-trivy/commit/0eb5663c96f2b3ae3c38e7804f89821339085f0e) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-trivy/blob/v1.17.0/HARDENING.md) |
 | v1.17.1 | [`v1.17.1`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.17.1) | [`1d4e9cf`](https://github.com/reviewdog/action-trivy/commit/1d4e9cf7cd9d2a130f84f9c4d171dcdea3af5348) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-trivy/blob/v1.17.1/HARDENING.md) |
+| v1.18.0 | [`v1.18.0`](https://github.com/chainguard-actions/reviewdog-action-trivy/tree/v1.18.0) | [`c51bf26`](https://github.com/reviewdog/action-trivy/commit/c51bf26459dab6a2b5c34e7f43eeb475746f1a00) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-trivy/blob/v1.18.0/HARDENING.md) |
 
 ## Privacy
 
